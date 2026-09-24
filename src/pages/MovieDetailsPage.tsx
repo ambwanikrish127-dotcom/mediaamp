@@ -11,7 +11,10 @@ import {
   Sparkles,
   Ticket,
   ChevronLeft,
-  Tv
+  Tv,
+  Building2,
+  RefreshCw,
+  AlertCircle
 } from 'lucide-react';
 
 export const MovieDetailsPage: React.FC = () => {
@@ -21,6 +24,7 @@ export const MovieDetailsPage: React.FC = () => {
   const [shows, setShows] = useState<IShow[]>([]);
   const [theatres, setTheatres] = useState<ITheatre[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Generate next 5 dates for date selector
   const availableDates: { label: string; dateStr: string; dayName: string }[] = [];
@@ -36,40 +40,57 @@ export const MovieDetailsPage: React.FC = () => {
 
   const [selectedDate, setSelectedDate] = useState<string>(availableDates[0].dateStr);
 
-  useEffect(() => {
+  const loadData = () => {
     if (!id) return;
     setLoading(true);
+    setError(null);
 
     Promise.all([
       MovieService.getMovieById(id),
-      ShowService.getShows({ movieId: id }),
-      TheatreService.getTheatres()
+      ShowService.getShows({ movieId: id, city: selectedCity }),
+      TheatreService.getTheatres({ city: selectedCity })
     ])
       .then(([movieRes, showRes, theatreRes]) => {
         if (movieRes.success) setMovie(movieRes.movie);
-        if (showRes.success) setShows(showRes.shows);
-        if (theatreRes.success) setTheatres(theatreRes.theatres);
+        if (showRes.success) setShows(showRes.shows || []);
+        if (theatreRes.success) setTheatres(theatreRes.theatres || []);
       })
-      .catch(err => console.error(err))
+      .catch((err) => {
+        console.error('Error fetching movie details:', err);
+        setError(err.message || 'Failed to load movie information.');
+      })
       .finally(() => setLoading(false));
-  }, [id]);
+  };
+
+  useEffect(() => {
+    loadData();
+  }, [id, selectedCity]);
 
   if (loading) {
     return (
       <div className="max-w-7xl mx-auto px-4 py-20 text-center text-slate-400">
         <div className="animate-spin w-8 h-8 border-2 border-rose-500 border-t-transparent rounded-full mx-auto mb-4" />
-        <p>Loading movie premiere details and auditoriums...</p>
+        <p>Loading showtimes in {selectedCity}...</p>
       </div>
     );
   }
 
-  if (!movie) {
+  if (error || !movie) {
     return (
       <div className="max-w-7xl mx-auto px-4 py-20 text-center text-slate-100">
-        <h2 className="text-2xl font-bold">Movie not found</h2>
-        <Link to="/movies" className="mt-4 inline-block px-4 py-2 bg-rose-600 rounded-lg text-sm">
-          Return to Movies
-        </Link>
+        <AlertCircle className="w-12 h-12 text-rose-500 mx-auto mb-3" />
+        <h2 className="text-2xl font-bold">{error || 'Movie not found'}</h2>
+        <div className="mt-4 flex justify-center gap-3">
+          <button
+            onClick={loadData}
+            className="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm font-semibold transition"
+          >
+            Retry
+          </button>
+          <Link to="/movies" className="px-4 py-2 bg-rose-600 rounded-lg text-sm font-semibold">
+            Return to Movies
+          </Link>
+        </div>
       </div>
     );
   }
@@ -105,7 +126,7 @@ export const MovieDetailsPage: React.FC = () => {
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-900/80 backdrop-blur-md border border-slate-700/80 text-xs font-semibold text-slate-300 hover:text-white hover:border-slate-500 transition"
           >
             <ChevronLeft className="w-4 h-4" />
-            <span>Back to Catalog</span>
+            <span>Back to Movies</span>
           </Link>
         </div>
 
@@ -127,6 +148,9 @@ export const MovieDetailsPage: React.FC = () => {
               <span className="text-xs text-rose-400 font-semibold px-2 py-0.5 rounded-md bg-rose-950/60 border border-rose-800/40">
                 {movie.language}
               </span>
+              <span className="text-xs text-amber-400 font-semibold px-2 py-0.5 rounded-md bg-amber-950/60 border border-amber-800/40">
+                📍 Showing in {selectedCity}
+              </span>
             </div>
 
             <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-white tracking-tight">
@@ -145,7 +169,7 @@ export const MovieDetailsPage: React.FC = () => {
               <span className="text-slate-400">•</span>
               <span className="text-slate-200">{movie.genre.join(' • ')}</span>
               <span className="text-slate-400">•</span>
-              <span className="text-slate-400">Release: {movie.releaseDate}</span>
+              <span className="text-slate-400">Director: {movie.director}</span>
             </div>
           </div>
         </div>
@@ -156,13 +180,13 @@ export const MovieDetailsPage: React.FC = () => {
         {/* Left 2 Cols: Theatres and Showtimes */}
         <div className="lg:col-span-2 space-y-8">
           {/* Date Picker Bar */}
-          <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 space-y-3">
+          <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 space-y-3 shadow-lg">
             <div className="flex items-center justify-between text-xs text-slate-400">
               <span className="font-semibold uppercase tracking-wider flex items-center gap-1.5 text-slate-300">
                 <Calendar className="w-4 h-4 text-rose-500" />
                 <span>Select Screening Date</span>
               </span>
-              <span className="text-slate-500">City: {selectedCity}</span>
+              <span className="text-rose-400 font-medium">📍 {selectedCity}</span>
             </div>
 
             <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
@@ -186,42 +210,47 @@ export const MovieDetailsPage: React.FC = () => {
           {/* Theatres & Shows List */}
           <div className="space-y-6">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-extrabold text-white flex items-center gap-2">
-                <Tv className="w-5 h-5 text-rose-500" />
-                <span>Available Theatres & Showtimes</span>
-              </h2>
-              <span className="text-xs text-slate-400">
-                Click any showtime to select seats
-              </span>
+              <div>
+                <h2 className="text-xl font-extrabold text-white flex items-center gap-2">
+                  <Tv className="w-5 h-5 text-rose-500" />
+                  <span>Cinemas in {selectedCity}</span>
+                </h2>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Select a showtime to choose seats
+                </p>
+              </div>
             </div>
 
             {Object.keys(showsByTheatre).length === 0 ? (
               <div className="p-8 rounded-2xl bg-slate-900/60 border border-slate-800 text-center space-y-3">
                 <Ticket className="w-10 h-10 text-slate-600 mx-auto" />
-                <h4 className="text-sm font-bold text-slate-300">No shows scheduled for {selectedDate}</h4>
+                <h4 className="text-sm font-bold text-slate-300">
+                  No shows scheduled in {selectedCity} for {selectedDate}
+                </h4>
                 <p className="text-xs text-slate-500">
-                  Please pick another date from the calendar selector above.
+                  Please pick another date above, or switch your city in the top navigation bar.
                 </p>
               </div>
             ) : (
               Object.entries(showsByTheatre).map(([theatreId, theatreShows]) => {
                 const theatre = theatres.find(t => t._id === theatreId);
                 const theatreName = theatre?.name || theatreShows[0].theatreName || 'CineBook Multiplex';
-                const theatreLocation = theatre?.location || theatreShows[0].theatreLocation || 'Auditorium Complex';
+                const theatreAddress = theatre?.address || theatre?.location || theatreShows[0].theatreAddress || theatreShows[0].theatreLocation || `${selectedCity}`;
 
                 return (
                   <div
                     key={theatreId}
-                    className="p-6 rounded-2xl bg-slate-900 border border-slate-800 hover:border-slate-700 transition space-y-4"
+                    className="p-6 rounded-2xl bg-slate-900 border border-slate-800 hover:border-slate-700 transition space-y-4 shadow-md"
                   >
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-800/80">
                       <div>
-                        <h3 className="text-base font-bold text-white flex items-center gap-2">
+                        <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                          <Building2 className="w-4 h-4 text-rose-500 shrink-0" />
                           <span>{theatreName}</span>
                         </h3>
                         <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
-                          <MapPin className="w-3.5 h-3.5 text-rose-500 shrink-0" />
-                          <span>{theatreLocation}</span>
+                          <MapPin className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                          <span>{theatreAddress}</span>
                         </p>
                       </div>
 
@@ -241,7 +270,7 @@ export const MovieDetailsPage: React.FC = () => {
                         <Link
                           key={show._id}
                           to={`/shows/${show._id}/seats`}
-                          className="group p-3 rounded-xl bg-slate-950 border border-slate-800 hover:border-rose-500 hover:bg-rose-950/20 transition flex flex-col items-center text-center space-y-1"
+                          className="group p-3 rounded-xl bg-slate-950 border border-slate-800 hover:border-rose-500 hover:bg-rose-950/20 transition flex flex-col items-center text-center space-y-1 shadow-sm"
                         >
                           <span className="text-sm font-extrabold text-emerald-400 group-hover:text-rose-400 transition">
                             {show.time}
@@ -262,52 +291,41 @@ export const MovieDetailsPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Right Col: Movie Details, Cast & Director */}
+        {/* Right Col: Movie Synopsis, Cast, Director */}
         <div className="space-y-6">
-          {/* About Synopsis */}
           <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
-            <h3 className="text-base font-extrabold text-white flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-amber-400" />
-              <span>Movie Synopsis</span>
+            <h3 className="text-base font-bold text-white flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-rose-500" />
+              <span>About the Movie</span>
             </h3>
-            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+            <p className="text-sm text-slate-300 leading-relaxed">
               {movie.description}
             </p>
 
-            <div className="pt-4 border-t border-slate-800 space-y-3 text-xs">
+            <div className="pt-4 border-t border-slate-800/80 space-y-3">
               <div>
-                <span className="text-slate-400 uppercase tracking-wider font-semibold block text-[10px]">
+                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">
                   Director
                 </span>
-                <span className="text-white font-bold text-sm">{movie.director}</span>
+                <p className="text-sm font-bold text-white mt-0.5">{movie.director}</p>
               </div>
 
               <div>
-                <span className="text-slate-400 uppercase tracking-wider font-semibold block text-[10px] mb-1.5">
+                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">
                   Starring Cast
                 </span>
-                <div className="flex flex-wrap gap-1.5">
-                  {movie.cast.map(c => (
+                <div className="flex flex-wrap gap-1.5 mt-1.5">
+                  {movie.cast.map((actor, idx) => (
                     <span
-                      key={c}
-                      className="px-2.5 py-1 rounded-lg bg-slate-950 text-slate-200 border border-slate-800 text-xs"
+                      key={idx}
+                      className="px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 text-xs text-slate-300"
                     >
-                      {c}
+                      {actor}
                     </span>
                   ))}
                 </div>
               </div>
             </div>
-          </div>
-
-          {/* Safety & Cancellation Policy Card */}
-          <div className="p-5 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-2 text-xs">
-            <h4 className="font-bold text-white flex items-center gap-1.5">
-              <span>🎟️ CineBook Assurance</span>
-            </h4>
-            <p className="text-slate-400 leading-relaxed">
-              Free cancellation is supported up to 30 minutes before showtime. 100% refund is initiated directly upon eligible cancellation.
-            </p>
           </div>
         </div>
       </div>

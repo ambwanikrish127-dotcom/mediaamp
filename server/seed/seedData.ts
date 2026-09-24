@@ -1,3 +1,18 @@
+// Master Seed Dataset for CineBook Cinema Application
+
+export const SEED_CITIES = [
+  { _id: 'city_1', name: 'Jaipur', state: 'Rajasthan', country: 'India', slug: 'jaipur', isActive: true },
+  { _id: 'city_2', name: 'Delhi', state: 'Delhi NCR', country: 'India', slug: 'delhi', isActive: true },
+  { _id: 'city_3', name: 'Mumbai', state: 'Maharashtra', country: 'India', slug: 'mumbai', isActive: true },
+  { _id: 'city_4', name: 'Bangalore', state: 'Karnataka', country: 'India', slug: 'bangalore', isActive: true },
+  { _id: 'city_5', name: 'Hyderabad', state: 'Telangana', country: 'India', slug: 'hyderabad', isActive: true },
+  { _id: 'city_6', name: 'Pune', state: 'Maharashtra', country: 'India', slug: 'pune', isActive: true },
+  { _id: 'city_7', name: 'Chandigarh', state: 'Punjab', country: 'India', slug: 'chandigarh', isActive: true },
+  { _id: 'city_8', name: 'Kolkata', state: 'West Bengal', country: 'India', slug: 'kolkata', isActive: true },
+  { _id: 'city_9', name: 'Chennai', state: 'Tamil Nadu', country: 'India', slug: 'chennai', isActive: true },
+  { _id: 'city_10', name: 'Ahmedabad', state: 'Gujarat', country: 'India', slug: 'ahmedabad', isActive: true }
+];
+
 export const SEED_MOVIES = [
   {
     _id: 'mov_1',
@@ -138,10 +153,10 @@ export const SEED_MOVIES = [
   {
     _id: 'mov_9',
     title: 'Avatar: Fire and Ash',
-    description: 'The journey continues as Jake Sully and Neytiri encounter the Ash People, a more aggressive clan of Na\'vi residing around volcanic regions.',
-    poster: 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=600&auto=format&fit=crop&q=80',
-    banner: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=1600&auto=format&fit=crop&q=80',
-    genre: ['Sci-Fi', 'Adventure', 'Fantasy'],
+    description: 'The continuing epic saga of the Sully family across new volcanic biomes of Pandora, introducing the hostile Ash People.',
+    poster: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=600&auto=format&fit=crop&q=80',
+    banner: 'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=1600&auto=format&fit=crop&q=80',
+    genre: ['Sci-Fi', 'Adventure', 'Action'],
     language: 'English',
     rating: 8.5,
     duration: '185 min',
@@ -171,66 +186,221 @@ export const SEED_MOVIES = [
   }
 ];
 
+// Theatres across key Indian cities (Jaipur, Delhi, Mumbai, Bangalore, Hyderabad, Pune, etc.)
 export const SEED_THEATRES = [
+  // --- JAIPUR ---
   {
-    _id: 'th_1',
-    name: 'CineBook Grand Luxe (Dolby Atmos)',
+    _id: 'th_jpr_1',
+    name: 'PVR C-Scheme',
+    city: 'Jaipur',
+    citySlug: 'jaipur',
+    address: 'C-Scheme, Ashok Nagar, Near Statue Circle, Jaipur',
+    location: 'C-Scheme, Ashok Nagar, Jaipur',
+    images: [
+      'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=800&auto=format&fit=crop&q=80'
+    ],
+    facilities: ['IMAX 4K Laser', 'Dolby Atmos', 'Recliner Seating', 'Gourmet Lounge', 'Wheelchair Accessible', 'Valet Parking'],
+    totalScreens: 2,
+    status: 'ACTIVE',
+    isActive: true
+  },
+  {
+    _id: 'th_jpr_2',
+    name: 'INOX GT Central',
+    city: 'Jaipur',
+    citySlug: 'jaipur',
+    address: 'GT Central Mall, Gaurav Tower Marg, Malviya Nagar, Jaipur',
+    location: 'GT Central Mall, Malviya Nagar, Jaipur',
+    images: [
+      'https://images.unsplash.com/photo-1517604931442-7e0c8ed2963c?w=800&auto=format&fit=crop&q=80'
+    ],
+    facilities: ['Dolby Atmos', 'Insignia Dining', 'Recliners', 'F&B Service to Seat', 'Parking'],
+    totalScreens: 2,
+    status: 'ACTIVE',
+    isActive: true
+  },
+  {
+    _id: 'th_jpr_3',
+    name: 'Raj Mandir Cinema',
+    city: 'Jaipur',
+    citySlug: 'jaipur',
+    address: 'Bhagwan Das Road, C-Scheme, Jaipur',
+    location: 'Bhagwan Das Road, Jaipur',
+    images: [
+      'https://images.unsplash.com/photo-1574267432553-4b4628081c31?w=800&auto=format&fit=crop&q=80'
+    ],
+    facilities: ['Heritage Art Deco', '70mm Projection', 'Dolby Surround 7.1', 'Royal Seating', 'Concessions'],
+    totalScreens: 2,
+    status: 'ACTIVE',
+    isActive: true
+  },
+
+  // --- DELHI ---
+  {
+    _id: 'th_del_1',
+    name: 'PVR Select City',
+    city: 'Delhi',
+    citySlug: 'delhi',
+    address: 'Select CITYWALK Mall, A-3 District Centre, Saket, New Delhi',
+    location: 'Select CITYWALK, Saket, New Delhi',
+    images: [
+      'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=800&auto=format&fit=crop&q=80'
+    ],
+    facilities: ['IMAX Laser', 'Gold Class Recliners', 'Dolby Atmos', 'Valet Parking'],
+    totalScreens: 2,
+    status: 'ACTIVE',
+    isActive: true
+  },
+  {
+    _id: 'th_del_2',
+    name: 'INOX Nehru Place',
+    city: 'Delhi',
+    citySlug: 'delhi',
+    address: 'Epicuria Food Mall, Metro Station, Nehru Place, New Delhi',
+    location: 'Nehru Place, New Delhi',
+    images: [
+      'https://images.unsplash.com/photo-1517604931442-7e0c8ed2963c?w=800&auto=format&fit=crop&q=80'
+    ],
+    facilities: ['Dolby Atmos', 'Insignia', 'Laser 4K', 'Metro Connectivity'],
+    totalScreens: 2,
+    status: 'ACTIVE',
+    isActive: true
+  },
+
+  // --- MUMBAI ---
+  {
+    _id: 'th_mum_1',
+    name: 'PVR Phoenix',
     city: 'Mumbai',
-    location: 'Lower Parel, Phoenix Palladium',
+    citySlug: 'mumbai',
+    address: 'High Street Phoenix, Senapati Bapat Marg, Lower Parel, Mumbai',
+    location: 'Phoenix Palladium, Lower Parel, Mumbai',
+    images: [
+      'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=800&auto=format&fit=crop&q=80'
+    ],
+    facilities: ['IMAX with Laser', 'PXL Giant Screen', 'Dolby Atmos', 'Luxe Dining'],
     totalScreens: 2,
+    status: 'ACTIVE',
     isActive: true
   },
   {
-    _id: 'th_2',
-    name: 'CineBook IMAX Experience Centre',
-    city: 'Bengaluru',
-    location: 'Koramangala, Forum Mall',
+    _id: 'th_mum_2',
+    name: 'INOX Mall',
+    city: 'Mumbai',
+    citySlug: 'mumbai',
+    address: 'R-City Mall, LBS Marg, Ghatkopar West, Mumbai',
+    location: 'R-City Mall, Ghatkopar, Mumbai',
+    images: [
+      'https://images.unsplash.com/photo-1517604931442-7e0c8ed2963c?w=800&auto=format&fit=crop&q=80'
+    ],
+    facilities: ['Dolby Atmos', 'MX4D Motion', 'Laser 4K', 'Gourmet Cafe'],
     totalScreens: 2,
+    status: 'ACTIVE',
+    isActive: true
+  },
+
+  // --- BANGALORE ---
+  {
+    _id: 'th_blr_1',
+    name: 'PVR Forum Mall',
+    city: 'Bangalore',
+    citySlug: 'bangalore',
+    address: 'The Forum Mall, 21 Hosur Road, Koramangala, Bangalore',
+    location: 'Forum Mall, Koramangala, Bangalore',
+    images: [
+      'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=800&auto=format&fit=crop&q=80'
+    ],
+    facilities: ['IMAX Laser', 'Gold Class Recliners', 'Dolby Atmos', 'Parking'],
+    totalScreens: 2,
+    status: 'ACTIVE',
     isActive: true
   },
   {
-    _id: 'th_3',
-    name: 'CineBook Premiere Lounge',
-    city: 'Delhi NCR',
-    location: 'DLF Mall of India, Sector 18, Noida',
+    _id: 'th_blr_2',
+    name: 'INOX Garuda Mall',
+    city: 'Bangalore',
+    citySlug: 'bangalore',
+    address: 'Garuda Mall, Magrath Road, Ashok Nagar, Bangalore',
+    location: 'Garuda Mall, Magrath Road, Bangalore',
+    images: [
+      'https://images.unsplash.com/photo-1517604931442-7e0c8ed2963c?w=800&auto=format&fit=crop&q=80'
+    ],
+    facilities: ['Dolby Atmos', 'Insignia', 'Laser 4K', 'Concessions'],
     totalScreens: 2,
+    status: 'ACTIVE',
     isActive: true
   },
+
+  // --- HYDERABAD ---
   {
-    _id: 'th_4',
-    name: 'CineBook Gold Class Multiplex',
+    _id: 'th_hyd_1',
+    name: 'PVR Next Galleria',
     city: 'Hyderabad',
-    location: 'Road No. 1, Banjara Hills',
+    citySlug: 'hyderabad',
+    address: 'Next Galleria Mall, Punjagutta, Hyderabad',
+    location: 'Next Galleria Mall, Punjagutta, Hyderabad',
+    images: [
+      'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=800&auto=format&fit=crop&q=80'
+    ],
+    facilities: ['4DX', 'Dolby Atmos', 'Playhouse', 'Recliners'],
     totalScreens: 2,
+    status: 'ACTIVE',
     isActive: true
   },
   {
-    _id: 'th_5',
-    name: 'CineBook PXL Megaplex',
-    city: 'Pune',
-    location: 'Viman Nagar, Phoenix Marketcity',
+    _id: 'th_hyd_2',
+    name: 'INOX GVK One',
+    city: 'Hyderabad',
+    citySlug: 'hyderabad',
+    address: 'GVK One Mall, Road No. 1, Banjara Hills, Hyderabad',
+    location: 'GVK One Mall, Banjara Hills, Hyderabad',
+    images: [
+      'https://images.unsplash.com/photo-1517604931442-7e0c8ed2963c?w=800&auto=format&fit=crop&q=80'
+    ],
+    facilities: ['Insignia Recliners', 'Dolby Atmos 4K', 'Valet Parking'],
     totalScreens: 2,
+    status: 'ACTIVE',
+    isActive: true
+  },
+
+  // --- PUNE ---
+  {
+    _id: 'th_pun_1',
+    name: 'PVR Phoenix Marketcity',
+    city: 'Pune',
+    citySlug: 'pune',
+    address: 'Phoenix Marketcity, Viman Nagar, Pune',
+    location: 'Phoenix Marketcity, Viman Nagar, Pune',
+    images: [
+      'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=800&auto=format&fit=crop&q=80'
+    ],
+    facilities: ['PXL Screen', '4DX', 'Dolby Atmos', 'Recliners'],
+    totalScreens: 2,
+    status: 'ACTIVE',
+    isActive: true
+  },
+  {
+    _id: 'th_pun_2',
+    name: 'Cinepolis Westend',
+    city: 'Pune',
+    citySlug: 'pune',
+    address: 'Westend Mall, Aundh, Pune',
+    location: 'Westend Mall, Aundh, Pune',
+    images: [
+      'https://images.unsplash.com/photo-1517604931442-7e0c8ed2963c?w=800&auto=format&fit=crop&q=80'
+    ],
+    facilities: ['VIP Recliner Service', 'Dolby Atmos', 'Macro XE'],
+    totalScreens: 2,
+    status: 'ACTIVE',
     isActive: true
   }
 ];
 
-export const SEED_SCREENS = [
-  // Theatre 1
-  { _id: 'scr_1', theatreId: 'th_1', name: 'Audi 1 - IMAX Laser', type: 'IMAX Laser', totalSeats: 60 },
-  { _id: 'scr_2', theatreId: 'th_1', name: 'Audi 2 - Dolby Atmos 4K', type: 'Dolby Atmos', totalSeats: 60 },
-  // Theatre 2
-  { _id: 'scr_3', theatreId: 'th_2', name: 'Audi 1 - Laser 3D', type: 'IMAX', totalSeats: 60 },
-  { _id: 'scr_4', theatreId: 'th_2', name: 'Audi 2 - Dolby Cinema', type: 'Dolby Atmos', totalSeats: 60 },
-  // Theatre 3
-  { _id: 'scr_5', theatreId: 'th_3', name: 'Audi 1 - 4DX Dynamic', type: '4DX', totalSeats: 60 },
-  { _id: 'scr_6', theatreId: 'th_3', name: 'Audi 2 - Atmos Sound', type: 'Dolby Atmos', totalSeats: 60 },
-  // Theatre 4
-  { _id: 'scr_7', theatreId: 'th_4', name: 'Audi 1 - Gold Recliner Suite', type: 'Gold Class', totalSeats: 60 },
-  { _id: 'scr_8', theatreId: 'th_4', name: 'Audi 2 - Laser Atmos', type: 'Dolby Atmos', totalSeats: 60 },
-  // Theatre 5
-  { _id: 'scr_9', theatreId: 'th_5', name: 'Audi 1 - PXL Giant Screen', type: 'PXL', totalSeats: 60 },
-  { _id: 'scr_10', theatreId: 'th_5', name: 'Audi 2 - Ultra Atmos', type: 'Dolby Atmos', totalSeats: 60 }
-];
+// Screen generator for each theatre
+export const SEED_SCREENS = SEED_THEATRES.flatMap(t => [
+  { _id: `scr_${t._id}_1`, theatreId: t._id, name: 'Audi 1 - Laser Atmos', type: 'Dolby Atmos', totalSeats: 60 },
+  { _id: `scr_${t._id}_2`, theatreId: t._id, name: 'Audi 2 - IMAX Experience', type: 'IMAX Laser', totalSeats: 60 }
+]);
 
 // Helper to generate 60 seats per screen
 // A & B: Regular (10 each = 20)
@@ -302,101 +472,83 @@ export const SEED_FOOD_ITEMS = [
   },
   {
     _id: 'food_5',
-    name: 'Truffle & Herb Gourmet Popcorn',
+    name: 'Truffle & Parmesan Gourmet Popcorn',
     category: 'Popcorn',
-    price: 290,
+    price: 310,
     image: '🍿',
-    description: 'Infused with aromatic black truffle oil, rosemary, and fine parmesan flakes.',
+    description: 'Infused with Italian white truffle oil and freshly grated hard parmesan.',
     available: true
   },
 
   // Beverages
   {
     _id: 'food_6',
-    name: 'Chilled Coca-Cola Original (500ml)',
+    name: 'Coca-Cola Zero Sugar (Fountain 600ml)',
     category: 'Beverages',
-    price: 120,
+    price: 150,
     image: '🥤',
-    description: 'Ice-cold bubbly classic fountain drink served with crushed ice.',
+    description: 'Chilled bubbly fountain soda with crisp taste and zero calories.',
     available: true
   },
   {
     _id: 'food_7',
-    name: 'Coca-Cola Zero Sugar (500ml)',
+    name: 'Classic Ice-Cold Coca-Cola (600ml)',
     category: 'Beverages',
-    price: 130,
+    price: 150,
     image: '🥤',
-    description: 'Full refreshing cola flavor with crisp bubbles and zero calories.',
+    description: 'Refreshing fountain Coca-Cola poured over crushed crystal ice.',
     available: true
   },
   {
     _id: 'food_8',
-    name: 'Lemon Mint Iced Cooler',
+    name: 'Sprite Lemon-Lime Sparkle (600ml)',
     category: 'Beverages',
     price: 150,
-    image: '🍹',
-    description: 'Fresh hand-squeezed yellow lemons, muddled organic mint and chilled soda.',
+    image: '🥤',
+    description: 'Crisp, refreshing lemon-lime citrus soda served ice-cold.',
     available: true
   },
   {
     _id: 'food_9',
-    name: 'Cold Brew Mocha Frappe',
+    name: 'Peach & Mint Handcrafted Iced Tea (500ml)',
     category: 'Beverages',
     price: 180,
-    image: '🧋',
-    description: 'Rich Arabica coffee steeped for 18 hours, blended with chocolate and milk.',
+    image: '🧃',
+    description: 'Brewed black tea infused with sweet peach nectar and wild garden mint.',
     available: true
   },
   {
     _id: 'food_10',
-    name: 'Peach Passion Iced Tea',
+    name: 'Belgian Cold Brew Mocha Latte',
     category: 'Beverages',
-    price: 140,
-    image: '🧃',
-    description: 'Delicate brewed Ceylon black tea infused with fragrant peach nectar.',
-    available: true
-  },
-  {
-    _id: 'food_11',
-    name: 'Himalayan Sparkling Natural Water (750ml)',
-    category: 'Beverages',
-    price: 90,
-    image: '💧',
-    description: 'Naturally carbonated pure spring water bottled at the foothills of Himalayas.',
+    price: 210,
+    image: '☕',
+    description: 'Single-origin Arabica steeped for 18 hours, blended with rich cocoa & milk.',
     available: true
   },
 
   // Combos
   {
-    _id: 'food_12',
-    name: 'Cinema Classic Duo Combo',
+    _id: 'food_11',
+    name: 'Solo Movie Craver Combo',
     category: 'Combos',
-    price: 390,
+    price: 360,
     image: '🍿🥤',
-    description: '1 Large Salted Butter Popcorn + 2 Chilled Coke (500ml). The timeless movie pairing.',
+    description: '1 Large Butter Popcorn + 1 Medium Fountain Beverage of your choice.',
+    available: true
+  },
+  {
+    _id: 'food_12',
+    name: 'Couple Movie Night Duo Combo',
+    category: 'Combos',
+    price: 590,
+    image: '🍿🥤🥤',
+    description: '1 Tub Golden Caramel Popcorn + 2 Large Fountain Sodas + 1 Salted Fries.',
     available: true
   },
   {
     _id: 'food_13',
-    name: 'Caramel Movie Date Feast',
-    category: 'Combos',
-    price: 520,
-    image: '🍿🥤🍰',
-    description: '1 Large Caramel Tub Popcorn + 2 Drinks of choice + Warm Chocolate Lava Cake.',
-    available: true
-  },
-  {
-    _id: 'food_14',
-    name: 'Loaded Nacho & Beverage Combo',
-    category: 'Combos',
-    price: 340,
-    image: '🧀🥤',
-    description: 'Crispy warm corn tortilla chips with double cheese dip + 1 Chilled Beverage.',
-    available: true
-  },
-  {
-    _id: 'food_15',
-    name: 'Mega Family Showtime Pack',
+    name: 'Blockbuster Family Feast',
     category: 'Combos',
     price: 890,
     image: '🍿🥤🍔',
@@ -406,7 +558,7 @@ export const SEED_FOOD_ITEMS = [
 
   // Snacks & Bites
   {
-    _id: 'food_16',
+    _id: 'food_14',
     name: 'Mexican Loaded Cheesy Nachos',
     category: 'Snacks',
     price: 210,
@@ -415,7 +567,7 @@ export const SEED_FOOD_ITEMS = [
     available: true
   },
   {
-    _id: 'food_17',
+    _id: 'food_15',
     name: 'Golden Salted French Fries (Large)',
     category: 'Snacks',
     price: 160,
@@ -424,7 +576,7 @@ export const SEED_FOOD_ITEMS = [
     available: true
   },
   {
-    _id: 'food_18',
+    _id: 'food_16',
     name: 'Jalapeño Cream Cheese Poppers (6 Pcs)',
     category: 'Snacks',
     price: 190,
@@ -433,7 +585,7 @@ export const SEED_FOOD_ITEMS = [
     available: true
   },
   {
-    _id: 'food_19',
+    _id: 'food_17',
     name: 'Crispy Paneer Makhani Burger',
     category: 'Snacks',
     price: 220,
@@ -442,7 +594,7 @@ export const SEED_FOOD_ITEMS = [
     available: true
   },
   {
-    _id: 'food_20',
+    _id: 'food_18',
     name: 'Grilled Herb Chicken Club Sliders (2 Pcs)',
     category: 'Snacks',
     price: 260,
@@ -451,7 +603,7 @@ export const SEED_FOOD_ITEMS = [
     available: true
   },
   {
-    _id: 'food_21',
+    _id: 'food_19',
     name: 'Gooey Dark Chocolate Lava Cake',
     category: 'Snacks',
     price: 160,
@@ -460,7 +612,7 @@ export const SEED_FOOD_ITEMS = [
     available: true
   },
   {
-    _id: 'food_22',
+    _id: 'food_20',
     name: 'Artisan Churros with Dulce de Leche',
     category: 'Snacks',
     price: 180,
@@ -471,9 +623,9 @@ export const SEED_FOOD_ITEMS = [
 ];
 
 // Helper to generate active shows for upcoming dates
+// Generates shows for all NOW_SHOWING movies in each theatre so that selecting any movie shows showtimes!
 export function generateSeedShows() {
   const shows = [];
-  const times = ['10:30 AM', '01:45 PM', '05:15 PM', '08:30 PM', '11:15 PM'];
   
   // Dates: Today and next 4 days in YYYY-MM-DD
   const dates: string[] = [];
@@ -485,27 +637,33 @@ export function generateSeedShows() {
   }
 
   let showCounter = 1;
-
-  // Let's create shows across theatres and now showing movies
   const nowShowing = SEED_MOVIES.filter(m => m.status === 'NOW_SHOWING');
+
+  // Standard showtime slots for cinema theatres
+  const timeSlots = ['10:30 AM', '01:30 PM', '05:00 PM', '08:30 PM'];
 
   for (const theatre of SEED_THEATRES) {
     const screens = SEED_SCREENS.filter(s => s.theatreId === theatre._id);
+    const screen1 = screens[0];
+    const screen2 = screens[1] || screens[0];
 
     for (let dayIdx = 0; dayIdx < dates.length; dayIdx++) {
       const date = dates[dayIdx];
 
-      for (let sIdx = 0; sIdx < screens.length; sIdx++) {
-        const screen = screens[sIdx];
-        // Distribute movies across screens
-        const movie = nowShowing[(showCounter + sIdx) % nowShowing.length];
+      // To ensure high coverage so every movie has shows in every theatre:
+      // Loop through movies and assign showtimes
+      for (let mIdx = 0; mIdx < nowShowing.length; mIdx++) {
+        const movie = nowShowing[mIdx];
+        const screen = mIdx % 2 === 0 ? screen1 : screen2;
+        
+        // Pick 2 to 3 showtimes for this movie
+        const chosenTimes = mIdx % 2 === 0 
+          ? ['10:30 AM', '05:00 PM', '08:30 PM'] 
+          : ['01:30 PM', '07:30 PM', '10:15 PM'];
 
-        // 3 to 4 shows per day per screen
-        const timesForScreen = sIdx === 0 ? ['10:30 AM', '01:45 PM', '05:15 PM', '08:30 PM'] : ['11:30 AM', '03:00 PM', '06:45 PM', '10:15 PM'];
-
-        for (const time of timesForScreen) {
-          // Pre-book a few realistic seats (e.g. C5, C6) so the user can immediately see real cinema seat states!
-          const preBooked = dayIdx === 0 && (time === '05:15 PM' || time === '08:30 PM') ? ['C4', 'C5', 'D5', 'D6'] : [];
+        for (const time of chosenTimes) {
+          // Pre-book a couple of seats for realism on today's evening show
+          const preBooked = (dayIdx === 0 && (time === '05:00 PM' || time === '08:30 PM')) ? ['C4', 'C5'] : [];
 
           shows.push({
             _id: `show_${showCounter++}`,

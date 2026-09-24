@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { BookingService } from '../services/api';
+import { PaymentService, BookingService } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import {
   Film,
@@ -13,8 +13,25 @@ import {
   AlertCircle,
   ShieldCheck,
   ChevronLeft,
-  Lock
+  Lock,
+  Sparkles,
+  Zap,
+  ExternalLink
 } from 'lucide-react';
+
+const loadRazorpayScript = (): Promise<boolean> => {
+  return new Promise((resolve) => {
+    if ((window as any).Razorpay) {
+      resolve(true);
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+};
 
 export const OrderSummaryPage: React.FC = () => {
   const navigate = useNavigate();
@@ -24,6 +41,10 @@ export const OrderSummaryPage: React.FC = () => {
   const [processing, setProcessing] = useState(false);
   const [paymentStep, setPaymentStep] = useState<'REVIEW' | 'PROCESSING' | 'SUCCESS'>('REVIEW');
   const [error, setError] = useState<string | null>(null);
+
+  // Active Razorpay order information
+  const [activeOrder, setActiveOrder] = useState<any>(null);
+  const [showSandboxModal, setShowSandboxModal] = useState<boolean>(false);
 
   // Quick inline login state if guest
   const [authEmail, setAuthEmail] = useState('');
@@ -37,6 +58,8 @@ export const OrderSummaryPage: React.FC = () => {
       return;
     }
     setDraft(JSON.parse(savedDraft));
+    // Pre-load Razorpay checkout script
+    loadRazorpayScript();
   }, [navigate]);
 
   if (!draft) {
@@ -78,22 +101,18 @@ export const OrderSummaryPage: React.FC = () => {
     }
   };
 
-  // Complete Booking & Payment
-  const handleConfirmAndPay = async () => {
-    if (!isAuthenticated) {
-      setError('Please sign in or use 1-Click Demo Login to confirm your booking.');
-      return;
-    }
-
+  // Complete Payment Verification Flow
+  const completeVerification = async (verifyPayload: {
+    razorpay_order_id: string;
+    razorpay_payment_id: string;
+    razorpay_signature: string;
+  }) => {
     try {
-      setError(null);
       setPaymentStep('PROCESSING');
       setProcessing(true);
 
-      // Simulate payment network roundtrip
-      await new Promise(resolve => setTimeout(resolve, 1400));
-
-      const response = await BookingService.createBooking({
+      const response = await PaymentService.verifyPayment({
+        ...verifyPayload,
         showId: draft.showId,
         seatNumbers: draft.seatNumbers,
         snacks: (draft.snacks || []).map((s: any) => ({
@@ -104,21 +123,149 @@ export const OrderSummaryPage: React.FC = () => {
 
       if (response.success && response.booking) {
         setPaymentStep('SUCCESS');
-        // Clear draft
+        setShowSandboxModal(false);
         sessionStorage.removeItem('cinebook_booking_draft');
 
-        // Short timeout for success animation then navigate to ticket
         setTimeout(() => {
           navigate(`/booking/${response.booking.bookingId}`, {
             state: { booking: response.booking }
           });
-        }, 800);
+        }, 750);
+      } else {
+        throw new Error(response.message || 'Payment verification failed');
       }
     } catch (err: any) {
       setPaymentStep('REVIEW');
       setProcessing(false);
-      setError(err.response?.data?.message || err.message || 'Booking payment could not be processed.');
+      setShowSandboxModal(false);
+      setError(
+        err.response?.data?.message ||
+          err.message ||
+          'Payment verification failed. Your seats have been released.'
+      );
     }
+  };
+
+  // Launch Razorpay Checkout
+  const handleConfirmAndPay = async () => {
+    if (!isAuthenticated) {
+      setError('Please sign in or use 1-Click Demo Login to confirm your booking.');
+      return;
+    }
+
+    try {
+      setError(null);
+      setProcessing(true);
+      setPaymentStep('PROCESSING');
+
+      // 1. Create order on backend with re-validated seat prices
+      const orderRes = await PaymentService.createOrder({
+        showId: draft.showId,
+        seatNumbers: draft.seatNumbers,
+        snacks: (draft.snacks || []).map((s: any) => ({
+          foodItemId: s.foodItemId,
+          quantity: s.quantity
+        }))
+      });
+
+      const orderId = orderRes.orderId || orderRes.order?.id;
+      const keyId = orderRes.key || orderRes.keyId || orderRes.order?.keyId || 'rzp_test_51MockCineKey01';
+      const orderAmount = orderRes.amount || orderRes.order?.amount || totalAmount * 100;
+      const currency = orderRes.currency || orderRes.order?.currency || 'INR';
+
+      if (!orderRes.success || !orderId) {
+        throw new Error(orderRes.message || 'Failed to create Razorpay payment order.');
+      }
+
+      setActiveOrder({
+        ...orderRes,
+        orderId,
+        key: keyId,
+        amount: orderAmount,
+        currency,
+        amountInRupees: orderAmount / 100
+      });
+
+      // 2. Load Razorpay script
+      const isScriptLoaded = await loadRazorpayScript();
+
+      if (isScriptLoaded && (window as any).Razorpay) {
+        try {
+          const options = {
+            key: keyId,
+            amount: orderAmount,
+            currency: currency,
+            name: 'CineBook Cinema Premiere',
+            description: `${show?.movieTitle || 'Movie'} (${draft.seatNumbers.length} Seats)`,
+            image: show?.moviePoster || undefined,
+            order_id: orderId,
+            prefill: {
+              name: user?.name,
+              email: user?.email,
+              contact: '9876543210'
+            },
+            theme: {
+              color: '#e11d48'
+            },
+            handler: function (response: any) {
+              completeVerification({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature
+              });
+            },
+            modal: {
+              ondismiss: function () {
+                setProcessing(false);
+                setPaymentStep('REVIEW');
+                PaymentService.handleFailure({
+                  showId: draft.showId,
+                  orderId: orderId,
+                  reason: 'Customer cancelled checkout flow in Razorpay modal.'
+                }).catch(() => {});
+              }
+            }
+          };
+
+          const rzp = new (window as any).Razorpay(options);
+          rzp.on('payment.failed', function (resp: any) {
+            console.error('Razorpay payment failure:', resp);
+            setProcessing(false);
+            setPaymentStep('REVIEW');
+            setError(resp.error?.description || 'Payment failed with bank.');
+            PaymentService.handleFailure({
+              showId: draft.showId,
+              orderId: orderId,
+              reason: resp.error?.description || 'Payment rejected by bank gateway.'
+            }).catch(() => {});
+          });
+
+          rzp.open();
+        } catch (modalErr) {
+          console.warn('Standard modal launch restricted, presenting integrated test checkout:', modalErr);
+          setShowSandboxModal(true);
+        }
+      } else {
+        // Fallback test interface for sandbox without external network
+        setShowSandboxModal(true);
+      }
+    } catch (err: any) {
+      setPaymentStep('REVIEW');
+      setProcessing(false);
+      setError(err.response?.data?.message || err.message || 'Booking payment could not be initiated.');
+    }
+  };
+
+  // Simulated Authorization for Test Mode
+  const handleAuthorizeSimulatedPayment = async () => {
+    if (!activeOrder) return;
+    const dummyPayId = `pay_sim_${Date.now()}`;
+    // Pass signature or let backend test mode verify
+    await completeVerification({
+      razorpay_order_id: activeOrder.orderId,
+      razorpay_payment_id: dummyPayId,
+      razorpay_signature: `sig_${Date.now()}`
+    });
   };
 
   return (
@@ -154,7 +301,7 @@ export const OrderSummaryPage: React.FC = () => {
         {/* Left 2 Cols: Order Breakdown */}
         <div className="lg:col-span-2 space-y-6">
           {/* Movie Session Card */}
-          <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
+          <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4 shadow-lg">
             <div className="flex items-start gap-4">
               <div className="w-16 h-20 rounded-xl overflow-hidden bg-slate-950 border border-slate-800 shrink-0">
                 <img
@@ -290,7 +437,7 @@ export const OrderSummaryPage: React.FC = () => {
 
           {/* User Confirmation Banner if logged in */}
           {isAuthenticated && (
-            <div className="p-4 rounded-2xl bg-emerald-950/40 border border-emerald-800/60 flex items-center justify-between text-xs">
+            <div className="p-4 rounded-2xl bg-emerald-950/40 border border-emerald-800/60 flex items-center justify-between text-xs shadow-md">
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
                 <span>
@@ -304,9 +451,9 @@ export const OrderSummaryPage: React.FC = () => {
           )}
         </div>
 
-        {/* Right Col: Price Breakdown & Simulated Payment */}
+        {/* Right Col: Price Breakdown & Payment */}
         <div className="space-y-6">
-          <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-5">
+          <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-5 shadow-xl">
             <h3 className="text-sm font-bold text-white uppercase tracking-wider">
               Payment Summary
             </h3>
@@ -341,18 +488,23 @@ export const OrderSummaryPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Demo Payment Notice */}
+            {/* Razorpay Gateway Badge */}
             <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 text-[11px] text-slate-400 space-y-1">
-              <div className="flex items-center gap-1.5 font-bold text-slate-200">
-                <CreditCard className="w-3.5 h-3.5 text-rose-500" />
-                <span>Demo Payment / Test Mode</span>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5 font-bold text-slate-200">
+                  <CreditCard className="w-3.5 h-3.5 text-rose-500" />
+                  <span>Razorpay Test Mode</span>
+                </div>
+                <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 font-bold border border-blue-500/30">
+                  SANDBOX
+                </span>
               </div>
               <p>
-                Simulated zero-risk payment gateway ready for live production Razorpay credentials.
+                Secure online payment processing via Razorpay test gateway with instant webhook & reconciliation support.
               </p>
             </div>
 
-            {/* Payment Button with Animated Steps */}
+            {/* Main Pay Button */}
             <button
               type="button"
               disabled={processing}
@@ -368,28 +520,96 @@ export const OrderSummaryPage: React.FC = () => {
               {paymentStep === 'PROCESSING' ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  <span>Processing Payment ₹{totalAmount}...</span>
+                  <span>Contacting Razorpay Gateway...</span>
                 </>
               ) : paymentStep === 'SUCCESS' ? (
                 <>
                   <CheckCircle2 className="w-4 h-4" />
-                  <span>Payment Successful! Generating Ticket...</span>
+                  <span>Payment Verified! Generating QR Pass...</span>
                 </>
               ) : (
                 <>
-                  <CreditCard className="w-4 h-4" />
-                  <span>Pay ₹{totalAmount}</span>
+                  <Zap className="w-4 h-4 fill-white" />
+                  <span>Pay ₹{totalAmount} via Razorpay</span>
                 </>
               )}
             </button>
 
             <div className="flex items-center justify-center gap-1.5 text-[11px] text-slate-500">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
-              <span>256-Bit Encrypted Cinema Checkout</span>
+              <span>HMAC-SHA256 Encrypted Payment Verification</span>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Test Mode Fallback / Sandbox Interactive Panel */}
+      {showSandboxModal && activeOrder && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
+          <div className="w-full max-w-md bg-slate-900 border border-slate-700 rounded-2xl p-6 space-y-5 shadow-2xl">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-xl bg-rose-500/10 text-rose-400">
+                  <CreditCard className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white">Razorpay Test Gateway</h3>
+                  <p className="text-xs text-slate-400">Order ID: {activeOrder.orderId}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setShowSandboxModal(false);
+                  setProcessing(false);
+                  setPaymentStep('REVIEW');
+                }}
+                className="text-xs text-slate-400 hover:text-white"
+              >
+                Cancel
+              </button>
+            </div>
+
+            <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2 text-xs">
+              <div className="flex justify-between">
+                <span className="text-slate-400">Total Payable:</span>
+                <span className="font-bold text-white font-mono">₹{activeOrder.amountInRupees || totalAmount}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Razorpay Key:</span>
+                <span className="font-mono text-slate-300 text-[10px]">{activeOrder.key}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Seats:</span>
+                <span className="font-mono text-rose-400">{draft.seatNumbers.join(', ')}</span>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={handleAuthorizeSimulatedPayment}
+                className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg transition"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                <span>Simulate Successful Payment Authorization</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowSandboxModal(false);
+                  setProcessing(false);
+                  setPaymentStep('REVIEW');
+                  setError('Payment was simulated as failed/cancelled by customer.');
+                }}
+                className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs transition"
+              >
+                Simulate Payment Failure
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

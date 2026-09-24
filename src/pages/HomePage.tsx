@@ -25,14 +25,23 @@ export const HomePage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState<string>('');
 
   useEffect(() => {
-    Promise.all([MovieService.getMovies(), TheatreService.getTheatres()])
-      .then(([movieRes, theatreRes]) => {
+    MovieService.getMovies()
+      .then((movieRes) => {
         if (movieRes.success) setMovies(movieRes.movies);
-        if (theatreRes.success) setTheatres(theatreRes.theatres);
       })
-      .catch(err => console.error('Error fetching home data:', err))
+      .catch((err) => console.error('Error fetching movies:', err))
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    TheatreService.getTheatres({ city: selectedCity })
+      .then((theatreRes) => {
+        if (theatreRes.success && Array.isArray(theatreRes.theatres)) {
+          setTheatres(theatreRes.theatres);
+        }
+      })
+      .catch((err) => console.error('Error fetching theatres for city:', err));
+  }, [selectedCity]);
 
   const nowShowing = movies.filter(m => m.status === 'NOW_SHOWING');
   const comingSoon = movies.filter(m => m.status === 'COMING_SOON');
@@ -44,8 +53,7 @@ export const HomePage: React.FC = () => {
     ? nowShowing
     : nowShowing.filter(m => m.genre.includes(activeGenre));
 
-  const cityTheatres = theatres.filter(t => t.city.toLowerCase() === selectedCity.toLowerCase());
-  const displayTheatres = cityTheatres.length > 0 ? cityTheatres : theatres;
+  const displayTheatres = theatres;
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -318,6 +326,13 @@ export const HomePage: React.FC = () => {
                 Premium multi-format cinema auditoriums equipped with IMAX & Dolby Atmos
               </p>
             </div>
+            <Link
+              to="/theatres"
+              className="text-xs font-semibold text-rose-400 hover:text-rose-300 flex items-center gap-1 transition"
+            >
+              <span>Explore All Theatres</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </Link>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">

@@ -26,7 +26,16 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// API helper methods
+// Cities API
+export const CityService = {
+  getCities: (search?: string) =>
+    api.get('/cities', { params: search ? { search } : undefined }).then(res => res.data),
+
+  getCityBySlug: (slug: string) =>
+    api.get(`/cities/${slug}`).then(res => res.data)
+};
+
+// Movies API
 export const MovieService = {
   getMovies: (params?: { genre?: string; language?: string; status?: string; search?: string }) =>
     api.get('/movies', { params }).then(res => res.data),
@@ -44,16 +53,21 @@ export const MovieService = {
     api.delete(`/movies/${id}`).then(res => res.data)
 };
 
+// Theatres API
 export const TheatreService = {
-  getTheatres: () =>
-    api.get('/theatres').then(res => res.data),
+  getTheatres: (params?: { city?: string; search?: string }) =>
+    api.get('/theatres', { params }).then(res => res.data),
+
+  getTheatreById: (id: string) =>
+    api.get(`/theatres/${id}`).then(res => res.data),
 
   createTheatre: (data: any) =>
     api.post('/theatres', data).then(res => res.data)
 };
 
+// Shows API
 export const ShowService = {
-  getShows: (params?: { movieId?: string; date?: string; theatreId?: string }) =>
+  getShows: (params?: { movieId?: string; date?: string; theatreId?: string; city?: string }) =>
     api.get('/shows', { params }).then(res => res.data),
 
   getShowById: (id: string) =>
@@ -79,11 +93,13 @@ export const ShowService = {
     }).then(res => res.data)
 };
 
+// Food / Concessions API
 export const FoodService = {
   getFoodItems: () =>
     api.get('/food').then(res => res.data)
 };
 
+// Bookings API
 export const BookingService = {
   createBooking: (payload: {
     showId: string;
@@ -105,14 +121,42 @@ export const BookingService = {
     api.post(`/bookings/${id}/cancel`).then(res => res.data)
 };
 
+// Payment Gateway (Razorpay Sandbox/Test Mode)
 export const PaymentService = {
-  createOrder: (amount: number, bookingReference?: string) =>
-    api.post('/payments/create', { amount, bookingReference }).then(res => res.data),
+  getConfig: () =>
+    api.get('/payments/config').then(res => res.data),
 
-  verifyPayment: (payload: { orderId: string; paymentId: string; signature?: string }) =>
-    api.post('/payments/verify', payload).then(res => res.data)
+  createOrder: (payload: {
+    showId: string;
+    seatNumbers: string[];
+    snacks?: { foodItemId: string; quantity: number }[];
+  }) =>
+    api.post('/payments/create-order', {
+      ...payload,
+      sessionToken: getSessionToken()
+    }).then(res => res.data),
+
+  verifyPayment: (payload: {
+    razorpay_order_id: string;
+    razorpay_payment_id: string;
+    razorpay_signature: string;
+    showId: string;
+    seatNumbers: string[];
+    snacks?: { foodItemId: string; quantity: number }[];
+  }) =>
+    api.post('/payments/verify', {
+      ...payload,
+      sessionToken: getSessionToken()
+    }).then(res => res.data),
+
+  handleFailure: (payload: { showId: string; orderId?: string; reason?: string }) =>
+    api.post('/payments/failure', {
+      ...payload,
+      sessionToken: getSessionToken()
+    }).then(res => res.data)
 };
 
+// Admin API
 export const AdminService = {
   getStats: () =>
     api.get('/admin/stats').then(res => res.data),

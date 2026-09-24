@@ -21,7 +21,7 @@ export async function createBooking(req: AuthRequest, res: Response): Promise<vo
       return;
     }
 
-    const result = await DataStore.createBooking({
+    const booking = await DataStore.createBooking({
       userId: req.user.id,
       userEmail: req.user.email,
       userName: req.user.name,
@@ -34,8 +34,7 @@ export async function createBooking(req: AuthRequest, res: Response): Promise<vo
     res.status(201).json({
       success: true,
       message: 'Booking confirmed successfully!',
-      booking: result.booking,
-      payment: result.payment
+      booking
     });
   } catch (err: any) {
     res.status(400).json({
@@ -52,7 +51,7 @@ export async function getMyBookings(req: AuthRequest, res: Response): Promise<vo
       return;
     }
 
-    const bookings = await DataStore.getBookingsByUser(req.user.id);
+    const bookings = await DataStore.getBookingsByUser(req.user.id, req.user.email);
     res.json({
       success: true,
       count: bookings.length,

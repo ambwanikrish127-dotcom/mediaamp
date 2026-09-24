@@ -123,3 +123,7 @@ export async function getMe(req: AuthRequest, res: Response): Promise<void> {
     res.status(500).json({ success: false, message: 'Server error fetching user profile.' });
   }
 }
+
+export async function logout(req: Request, res: Response): Promise<void> {
+  res.json({ success: true, message: 'Logged out successfully.' });
+}

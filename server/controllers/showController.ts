@@ -3,11 +3,12 @@ import { DataStore } from '../services/dataStore.js';
 
 export async function getShows(req: Request, res: Response): Promise<void> {
   try {
-    const { movieId, date, theatreId } = req.query;
+    const { movieId, date, theatreId, city } = req.query;
     const shows = await DataStore.getShows({
       movieId: movieId as string,
       date: date as string,
-      theatreId: theatreId as string
+      theatreId: theatreId as string,
+      city: city as string
     });
     res.json({ success: true, count: shows.length, shows });
   } catch (err: any) {

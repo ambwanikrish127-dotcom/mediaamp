@@ -7,6 +7,7 @@ interface AuthContextType {
   token: string | null;
   isAuthenticated: boolean;
   isAdmin: boolean;
+  loading: boolean;
   selectedCity: string;
   setSelectedCity: (city: string) => void;
   login: (email: string, password: string) => Promise<{ success: boolean; message?: string }>;
@@ -24,6 +25,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [token, setToken] = useState<string | null>(() => {
     return localStorage.getItem('cinebook_jwt_token');
   });
+  const [loading, setLoading] = useState<boolean>(false);
   const [selectedCity, setSelectedCity] = useState<string>(() => {
     return localStorage.getItem('cinebook_city') || 'Mumbai';
   });
@@ -35,6 +37,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     if (token) {
+      setLoading(true);
       api.get('/auth/me')
         .then(res => {
           if (res.data.success && res.data.user) {
@@ -42,10 +45,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             localStorage.setItem('cinebook_user', JSON.stringify(res.data.user));
           }
         })
-        .catch(() => {
-          // Token expired or invalid
-          logout();
+        .catch((err) => {
+          if (err.response?.status === 401 || err.response?.status === 403) {
+            // Token expired or invalid
+            logout();
+          }
+        })
+        .finally(() => {
+          setLoading(false);
         });
+    } else {
+      setLoading(false);
     }
   }, [token]);
 
@@ -90,6 +100,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = () => {
+    api.post('/auth/logout').catch(() => {});
     setUser(null);
     setToken(null);
     localStorage.removeItem('cinebook_jwt_token');
@@ -99,8 +110,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const value: AuthContextType = {
     user,
     token,
-    isAuthenticated: !!user,
+    isAuthenticated: !!user && !!token,
     isAdmin: user?.role === 'admin',
+    loading,
     selectedCity,
     setSelectedCity: handleSetCity,
     login,

@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Film, Lock, Mail, AlertCircle, Sparkles, ShieldCheck } from 'lucide-react';
 
 export const LoginPage: React.FC = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const returnTo = (location.state as any)?.from?.pathname || '/';
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -21,7 +23,7 @@ export const LoginPage: React.FC = () => {
     setLoading(false);
 
     if (res.success) {
-      navigate('/movies');
+      navigate(returnTo, { replace: true });
     } else {
       setError(res.message || 'Login failed.');
     }
@@ -39,9 +41,9 @@ export const LoginPage: React.FC = () => {
     setLoading(false);
     if (res.success) {
       if (asAdmin) {
-        navigate('/admin');
+        navigate('/admin', { replace: true });
       } else {
-        navigate('/movies');
+        navigate(returnTo, { replace: true });
       }
     } else {
       setError(res.message || 'Demo login failed.');

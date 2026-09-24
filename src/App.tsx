@@ -8,6 +8,7 @@ import { Footer } from './components/Footer';
 import { HomePage } from './pages/HomePage';
 import { MoviesPage } from './pages/MoviesPage';
 import { MovieDetailsPage } from './pages/MovieDetailsPage';
+import { TheatresPage } from './pages/TheatresPage';
 import { SeatSelectionPage } from './pages/SeatSelectionPage';
 import { SnacksPage } from './pages/SnacksPage';
 import { OrderSummaryPage } from './pages/OrderSummaryPage';
@@ -16,6 +17,7 @@ import { MyBookingsPage } from './pages/MyBookingsPage';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { AdminPage } from './pages/AdminPage';
+import { ProtectedRoute } from './components/ProtectedRoute';
 
 export default function App() {
   return (
@@ -29,20 +31,49 @@ export default function App() {
               <Route path="/" element={<HomePage />} />
               <Route path="/movies" element={<MoviesPage />} />
               <Route path="/movies/:id" element={<MovieDetailsPage />} />
+              <Route path="/theatres" element={<TheatresPage />} />
 
               {/* Complete Booking Funnel */}
               <Route path="/shows/:id/seats" element={<SeatSelectionPage />} />
               <Route path="/snacks" element={<SnacksPage />} />
-              <Route path="/checkout" element={<OrderSummaryPage />} />
-              <Route path="/booking/:id" element={<BookingConfirmationPage />} />
+              <Route
+                path="/checkout"
+                element={
+                  <ProtectedRoute>
+                    <OrderSummaryPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/booking/:id"
+                element={
+                  <ProtectedRoute>
+                    <BookingConfirmationPage />
+                  </ProtectedRoute>
+                }
+              />
 
               {/* User Account & History */}
-              <Route path="/my-bookings" element={<MyBookingsPage />} />
+              <Route
+                path="/my-bookings"
+                element={
+                  <ProtectedRoute>
+                    <MyBookingsPage />
+                  </ProtectedRoute>
+                }
+              />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
 
               {/* Admin Portal */}
-              <Route path="/admin" element={<AdminPage />} />
+              <Route
+                path="/admin"
+                element={
+                  <ProtectedRoute requireAdmin={true}>
+                    <AdminPage />
+                  </ProtectedRoute>
+                }
+              />
 
               {/* Fallback */}
               <Route path="*" element={<Navigate to="/" replace />} />

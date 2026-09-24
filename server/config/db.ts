@@ -2,21 +2,47 @@ import mongoose from 'mongoose';
 
 export let isConnectedToMongo = false;
 
+export function getMongoUri(): string {
+  // Read MONGO_URI or MONGODB_URI
+  let uri = process.env.MONGO_URI || process.env.MONGODB_URI || '';
+  
+  // If user provided uri with template placeholder, substitute the verified database password
+  if (uri.includes('<db_password>')) {
+    uri = uri.replace('<db_password>', 'krish123');
+  }
+
+  // Fallback to cluster URI if empty
+  if (!uri) {
+    uri = 'mongodb+srv://krish:krish123@cluster0.j5itlwt.mongodb.net/cinebook?retryWrites=true&w=majority&appName=Cluster0';
+  }
+
+  // Ensure default database name is cinebook if not specified
+  if (uri.startsWith('mongodb+srv://') && !uri.includes('.net/cinebook')) {
+    if (uri.includes('.net/?')) {
+      uri = uri.replace('.net/?', '.net/cinebook?');
+    } else if (uri.endsWith('.net') || uri.endsWith('.net/')) {
+      uri = uri.replace(/\.net\/?$/, '.net/cinebook?retryWrites=true&w=majority');
+    }
+  }
+
+  return uri;
+}
+
 export async function connectDB(): Promise<boolean> {
-  const mongoUri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/cinebook';
+  const mongoUri = getMongoUri();
   
   try {
-    // Attempt Mongoose connection with a quick timeout so app doesn't hang if no external Mongo
     mongoose.set('strictQuery', true);
+    console.log(`[Database] Connecting to MongoDB Atlas cluster...`);
     await mongoose.connect(mongoUri, {
-      serverSelectionTimeoutMS: 2000,
+      serverSelectionTimeoutMS: 10000,
     });
     isConnectedToMongo = true;
-    console.log(`[Database] MongoDB Connected successfully via Mongoose: ${mongoUri}`);
+    console.log(`[Database] MongoDB Atlas Connected successfully via Mongoose! Database: ${mongoose.connection.name}`);
     return true;
-  } catch (err) {
+  } catch (err: any) {
     isConnectedToMongo = false;
-    console.log('[Database] Live MongoDB instance not found. Initializing built-in high performance MERN Document Store.');
+    console.error('[Database] MongoDB connection error:', err.message);
     return false;
   }
 }

@@ -23,12 +23,26 @@ export interface IMovie {
   isActive?: boolean;
 }
 
+export interface ICity {
+  _id: string;
+  name: string;
+  state: string;
+  country: string;
+  slug: string;
+  isActive: boolean;
+}
+
 export interface ITheatre {
   _id: string;
   name: string;
   city: string;
-  location: string;
+  citySlug?: string;
+  address?: string;
+  location?: string;
+  images?: string[];
+  facilities?: string[];
   totalScreens: number;
+  status?: 'ACTIVE' | 'INACTIVE';
   isActive?: boolean;
 }
 
@@ -41,6 +55,8 @@ export interface IShow {
   duration?: string;
   theatreId: string;
   theatreName?: string;
+  theatreCity?: string;
+  theatreAddress?: string;
   theatreLocation?: string;
   screenId: string;
   screenName?: string;
@@ -53,6 +69,7 @@ export interface IShow {
     Recliner: number;
   };
   bookedSeats?: string[];
+  lockedSeats?: any[];
 }
 
 export interface ISeatState {

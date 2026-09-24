@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Film, Lock, Mail, User, AlertCircle } from 'lucide-react';
 
 export const RegisterPage: React.FC = () => {
   const { register } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const returnTo = (location.state as any)?.from?.pathname || '/';
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -22,7 +24,7 @@ export const RegisterPage: React.FC = () => {
     setLoading(false);
 
     if (res.success) {
-      navigate('/movies');
+      navigate(returnTo, { replace: true });
     } else {
       setError(res.message || 'Registration failed.');
     }

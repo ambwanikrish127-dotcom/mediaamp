@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs';
 import {
+  SEED_CITIES,
   SEED_MOVIES,
   SEED_THEATRES,
   SEED_SCREENS,
@@ -9,6 +10,7 @@ import {
 } from '../seed/seedData.js';
 import { isConnectedToMongo } from '../config/db.js';
 import {
+  CityModel,
   UserModel,
   MovieModel,
   TheatreModel,
@@ -19,6 +21,7 @@ import {
   BookingModel,
   PaymentModel,
   RefundModel,
+  ICity,
   IUser,
   IMovie,
   ITheatre,
@@ -33,6 +36,7 @@ import {
 
 // In-Memory Storage maps
 interface IStore {
+  cities: Map<string, any>;
   users: Map<string, any>;
   movies: Map<string, any>;
   theatres: Map<string, any>;
@@ -46,6 +50,7 @@ interface IStore {
 }
 
 const memoryStore: IStore = {
+  cities: new Map(),
   users: new Map(),
   movies: new Map(),
   theatres: new Map(),
@@ -88,6 +93,7 @@ export async function initDatabaseStore() {
 
   // Seed memory store
   demoUsers.forEach(u => memoryStore.users.set(u._id, { ...u }));
+  SEED_CITIES.forEach(c => memoryStore.cities.set(c._id, { ...c }));
   SEED_MOVIES.forEach(m => memoryStore.movies.set(m._id, { ...m }));
   SEED_THEATRES.forEach(t => memoryStore.theatres.set(t._id, { ...t }));
   SEED_SCREENS.forEach(s => memoryStore.screens.set(s._id, { ...s }));
@@ -108,6 +114,7 @@ export async function initDatabaseStore() {
       const userCount = await UserModel.countDocuments();
       if (userCount === 0) {
         await UserModel.insertMany(demoUsers);
+        await CityModel.insertMany(SEED_CITIES);
         await MovieModel.insertMany(SEED_MOVIES);
         await TheatreModel.insertMany(SEED_THEATRES);
         await ScreenModel.insertMany(SEED_SCREENS);
@@ -127,11 +134,54 @@ export async function initDatabaseStore() {
   }
 
   isInitialized = true;
-  console.log(`[Database] CineBook data store ready. Movies: ${memoryStore.movies.size}, Theatres: ${memoryStore.theatres.size}, Shows: ${memoryStore.shows.size}, Food: ${memoryStore.foodItems.size}`);
+  console.log(`[Database] CineBook data store ready. Cities: ${memoryStore.cities.size}, Theatres: ${memoryStore.theatres.size}, Shows: ${memoryStore.shows.size}, Movies: ${memoryStore.movies.size}`);
 }
 
 // Data Store Accessors
 export const DataStore = {
+  // Cities
+  async getCities(search?: string) {
+    if (isConnectedToMongo) {
+      try {
+        const query: any = { isActive: true };
+        if (search && search.trim()) {
+          const regex = new RegExp(search.trim(), 'i');
+          query.$or = [{ name: regex }, { state: regex }, { slug: regex }];
+        }
+        const cList = await CityModel.find(query);
+        if (cList && cList.length > 0) return cList.map(x => x.toObject());
+      } catch (err) {}
+    }
+
+    let cities = Array.from(memoryStore.cities.values()).filter(c => c.isActive !== false);
+    if (search && search.trim()) {
+      const q = search.trim().toLowerCase();
+      cities = cities.filter(
+        c =>
+          c.name.toLowerCase().includes(q) ||
+          c.slug.toLowerCase().includes(q) ||
+          c.state.toLowerCase().includes(q)
+      );
+    }
+    return cities;
+  },
+
+  async getCityBySlug(slug: string) {
+    if (isConnectedToMongo) {
+      try {
+        const c = await CityModel.findOne({ slug: slug.toLowerCase() });
+        if (c) return c.toObject();
+      } catch (err) {}
+    }
+    const clean = slug.toLowerCase().trim();
+    for (const city of memoryStore.cities.values()) {
+      if (city.slug === clean || city.name.toLowerCase() === clean) {
+        return city;
+      }
+    }
+    return null;
+  },
+
   // Users
   async findUserByEmail(email: string) {
     if (isConnectedToMongo) {
@@ -180,21 +230,25 @@ export const DataStore = {
   },
 
   // Movies
-  async getMovies(filter?: { genre?: string; language?: string; status?: string; search?: string }) {
+  async getMovies(filter?: { status?: string; language?: string; genre?: string; search?: string }) {
     if (isConnectedToMongo) {
       try {
         const query: any = { isActive: true };
         if (filter?.status) query.status = filter.status;
-        if (filter?.language) query.language = filter.language;
-        if (filter?.genre) query.genre = filter.genre;
-        if (filter?.search) query.title = { $regex: filter.search, $options: 'i' };
-        const movies = await MovieModel.find(query);
-        if (movies && movies.length > 0) return movies.map(m => m.toObject());
+        if (filter?.language) query.language = new RegExp(`^${filter.language}$`, 'i');
+        if (filter?.genre) query.genre = new RegExp(filter.genre, 'i');
+        if (filter?.search) {
+          query.$or = [
+            { title: new RegExp(filter.search, 'i') },
+            { genre: new RegExp(filter.search, 'i') }
+          ];
+        }
+        const m = await MovieModel.find(query);
+        if (m && m.length > 0) return m.map(x => x.toObject());
       } catch (err) {}
     }
 
     let list = Array.from(memoryStore.movies.values()).filter(m => m.isActive !== false);
-
     if (filter?.status) {
       list = list.filter(m => m.status === filter.status);
     }
@@ -238,52 +292,106 @@ export const DataStore = {
     return movie;
   },
 
-  async updateMovie(id: string, updateData: any) {
-    const existing = memoryStore.movies.get(id);
-    if (!existing) return null;
-    const updated = { ...existing, ...updateData };
-    memoryStore.movies.set(id, updated);
+  async updateMovie(id: string, movieData: any) {
+    let movie = memoryStore.movies.get(id);
+    if (!movie) {
+      if (isConnectedToMongo) {
+        try {
+          const m = await MovieModel.findByIdAndUpdate(id, movieData, { new: true });
+          if (m) return m.toObject();
+        } catch (e) {}
+      }
+      return null;
+    }
+    movie = { ...movie, ...movieData };
+    memoryStore.movies.set(id, movie);
     if (isConnectedToMongo) {
       try {
-        await MovieModel.findByIdAndUpdate(id, updateData, { new: true });
-      } catch (err) {}
+        await MovieModel.findByIdAndUpdate(id, movieData, { new: true });
+      } catch (e) {}
     }
-    return updated;
+    return movie;
   },
 
   async deleteMovie(id: string) {
-    const existing = memoryStore.movies.get(id);
-    if (!existing) return false;
-    // soft delete
-    existing.isActive = false;
-    memoryStore.movies.set(id, existing);
+    const movie = memoryStore.movies.get(id);
+    if (movie) {
+      movie.isActive = false;
+      memoryStore.movies.set(id, movie);
+    }
     if (isConnectedToMongo) {
       try {
         await MovieModel.findByIdAndUpdate(id, { isActive: false });
-      } catch (err) {}
+      } catch (e) {}
     }
     return true;
   },
 
   // Theatres
-  async getTheatres() {
-    if (isConnectedToMongo) {
-      try {
-        const t = await TheatreModel.find({ isActive: true });
-        if (t && t.length > 0) return t.map(x => x.toObject());
-      } catch (err) {}
+  async getTheatres(filter?: { city?: string; search?: string }) {
+    let list = Array.from(memoryStore.theatres.values()).filter(
+      t => (t.status === undefined || t.status === 'ACTIVE') && t.isActive !== false
+    );
+
+    if (filter?.city && filter.city.trim()) {
+      const qCity = filter.city.trim().toLowerCase();
+      list = list.filter(t => {
+        const tCity = (t.city || '').toLowerCase();
+        const tSlug = (t.citySlug || '').toLowerCase();
+        return (
+          tCity === qCity ||
+          tSlug === qCity ||
+          tCity.includes(qCity) ||
+          qCity.includes(tCity)
+        );
+      });
     }
-    return Array.from(memoryStore.theatres.values()).filter(t => t.isActive !== false);
+
+    if (filter?.search && filter.search.trim()) {
+      const q = filter.search.trim().toLowerCase();
+      list = list.filter(
+        t =>
+          t.name.toLowerCase().includes(q) ||
+          (t.address && t.address.toLowerCase().includes(q)) ||
+          (t.location && t.location.toLowerCase().includes(q))
+      );
+    }
+
+    return list.map(t => ({
+      _id: t._id,
+      name: t.name,
+      city: t.city,
+      citySlug: t.citySlug || t.city.toLowerCase(),
+      address: t.address || t.location || `${t.name}, ${t.city}`,
+      location: t.location || t.address || `${t.name}, ${t.city}`,
+      images: t.images || [
+        'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=800&auto=format&fit=crop&q=80'
+      ],
+      facilities: t.facilities || ['Dolby Atmos', '4K Laser Projection', 'Recliner Seating'],
+      status: t.status || 'ACTIVE',
+      totalScreens: t.totalScreens || 2,
+      isActive: t.isActive !== false
+    }));
   },
 
   async getTheatreById(id: string) {
-    if (isConnectedToMongo) {
-      try {
-        const t = await TheatreModel.findById(id);
-        if (t) return t.toObject();
-      } catch (err) {}
-    }
-    return memoryStore.theatres.get(id) || null;
+    const t = memoryStore.theatres.get(id);
+    if (!t) return null;
+    return {
+      _id: t._id,
+      name: t.name,
+      city: t.city,
+      citySlug: t.citySlug || t.city.toLowerCase(),
+      address: t.address || t.location || `${t.name}, ${t.city}`,
+      location: t.location || t.address || `${t.name}, ${t.city}`,
+      images: t.images || [
+        'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=800&auto=format&fit=crop&q=80'
+      ],
+      facilities: t.facilities || ['Dolby Atmos', '4K Laser Projection', 'Recliner Seating'],
+      status: t.status || 'ACTIVE',
+      totalScreens: t.totalScreens || 2,
+      isActive: t.isActive !== false
+    };
   },
 
   async createTheatre(theatreData: any) {
@@ -291,6 +399,11 @@ export const DataStore = {
     const theatre = {
       _id: id,
       ...theatreData,
+      address: theatreData.address || theatreData.location || `${theatreData.name}, ${theatreData.city}`,
+      location: theatreData.location || theatreData.address || `${theatreData.name}, ${theatreData.city}`,
+      facilities: theatreData.facilities || ['Dolby Atmos', '4K Laser', 'Recliners'],
+      images: theatreData.images || ['https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=800&auto=format&fit=crop&q=80'],
+      status: 'ACTIVE',
       isActive: true,
       createdAt: new Date()
     };
@@ -308,7 +421,7 @@ export const DataStore = {
       _id: `scr_${Date.now()}_2`,
       theatreId: id,
       name: 'Audi 2 - IMAX Experience',
-      type: 'IMAX',
+      type: 'IMAX Laser',
       totalSeats: 60
     };
     memoryStore.screens.set(scr1._id, scr1);
@@ -338,8 +451,22 @@ export const DataStore = {
   },
 
   // Shows
-  async getShows(filter?: { movieId?: string; date?: string; theatreId?: string }) {
+  async getShows(filter?: { movieId?: string; date?: string; theatreId?: string; city?: string }) {
     let shows = Array.from(memoryStore.shows.values()).filter(s => s.isActive !== false);
+
+    // Filter by city: find all theatres in this city
+    if (filter?.city && filter.city.trim()) {
+      const qCity = filter.city.trim().toLowerCase();
+      const cityTheatreIds = new Set<string>();
+      for (const [tId, t] of memoryStore.theatres.entries()) {
+        const tCity = (t.city || '').toLowerCase();
+        const tSlug = (t.citySlug || '').toLowerCase();
+        if (tCity === qCity || tSlug === qCity || tCity.includes(qCity) || qCity.includes(tCity)) {
+          cityTheatreIds.add(tId);
+        }
+      }
+      shows = shows.filter(s => cityTheatreIds.has(s.theatreId));
+    }
 
     if (filter?.movieId) {
       shows = shows.filter(s => s.movieId === filter.movieId);
@@ -359,8 +486,11 @@ export const DataStore = {
       return {
         ...show,
         movieTitle: movie?.title || 'Unknown Movie',
+        moviePoster: movie?.poster || '',
         theatreName: theatre?.name || 'Unknown Theatre',
-        theatreLocation: theatre?.location || '',
+        theatreCity: theatre?.city || '',
+        theatreAddress: theatre?.address || theatre?.location || '',
+        theatreLocation: theatre?.location || theatre?.address || '',
         screenName: screen?.name || 'Screen 1',
         screenType: screen?.type || 'Dolby Atmos'
       };
@@ -388,7 +518,9 @@ export const DataStore = {
       certification: movie?.certification || 'UA',
       duration: movie?.duration || '120 min',
       theatreName: theatre?.name || 'Unknown Theatre',
-      theatreLocation: theatre?.location || '',
+      theatreCity: theatre?.city || '',
+      theatreAddress: theatre?.address || theatre?.location || '',
+      theatreLocation: theatre?.location || theatre?.address || '',
       screenName: screen?.name || 'Screen 1',
       screenType: screen?.type || 'Standard'
     };
@@ -414,37 +546,35 @@ export const DataStore = {
     return show;
   },
 
-  // Seats & Seat Locking
-  async getSeatsForShow(showId: string, currentUserIdOrSession?: string) {
-    const show = await this.getShowById(showId);
-    if (!show) return null;
-
-    const screenSeats = Array.from(memoryStore.seats.values())
-      .filter(s => s.screenId === show.screenId);
+  // Seats and Locking
+  async getSeatsForShow(showId: string, currentSessionToken?: string) {
+    const show = memoryStore.shows.get(showId);
+    if (!show) throw new Error('Show not found');
 
     const now = new Date();
-    const activeLocks = (show.lockedSeats || []).filter((l: any) => new Date(l.lockedUntil) > now);
+    // Clean expired locks
+    show.lockedSeats = (show.lockedSeats || []).filter((lock: any) => new Date(lock.lockedUntil) > now);
 
-    // Map each seat to state: 'AVAILABLE' | 'SELECTED' | 'BOOKED'
+    const screenSeats = Array.from(memoryStore.seats.values()).filter(s => s.screenId === show.screenId);
+
+    // Compute status of each seat
     const seatsWithState = screenSeats.map(seat => {
-      const isBooked = (show.bookedSeats || []).includes(seat.seatNumber);
-      const lock = activeLocks.find((l: any) => l.seatNumber === seat.seatNumber);
-
-      let status: 'AVAILABLE' | 'SELECTED' | 'BOOKED' = 'AVAILABLE';
+      let status: 'AVAILABLE' | 'LOCKED' | 'BOOKED' = 'AVAILABLE';
       let isLockedByMe = false;
 
-      if (isBooked) {
+      if ((show.bookedSeats || []).includes(seat.seatNumber)) {
         status = 'BOOKED';
-      } else if (lock) {
-        if (currentUserIdOrSession && lock.lockedBy === currentUserIdOrSession) {
-          status = 'SELECTED';
-          isLockedByMe = true;
-        } else {
-          status = 'BOOKED'; // locked by another user shows as unavailable/booked to others
+      } else {
+        const lock = show.lockedSeats.find((l: any) => l.seatNumber === seat.seatNumber);
+        if (lock) {
+          status = 'LOCKED';
+          if (currentSessionToken && lock.lockedBy === currentSessionToken) {
+            isLockedByMe = true;
+          }
         }
       }
 
-      const price = show.prices?.[seat.category as 'Regular' | 'Premium' | 'Recliner'] || 250;
+      const price = show.prices?.[seat.category as 'Regular' | 'Premium' | 'Recliner'] || 220;
 
       return {
         _id: seat._id,
@@ -603,22 +733,30 @@ export const DataStore = {
     const discount = 0;
     const totalAmount = ticketAmount + snackAmount + convenienceFee - discount;
 
-    // Unique Booking ID: CB-XXXXXX
     const bookingId = `CB-${Date.now().toString().slice(-4)}${Math.floor(1000 + Math.random() * 9000)}`;
 
-    const booking: IBooking = {
+    const qrPayload = JSON.stringify({
+      bookingId,
+      showId: show._id,
+      seats: bookingRequest.seatNumbers,
+      amount: totalAmount,
+      date: show.date,
+      time: show.time
+    });
+
+    const newBooking: IBooking = {
       _id: `bkg_${Date.now()}`,
       bookingId,
       userId: bookingRequest.userId,
       userEmail: bookingRequest.userEmail,
       userName: bookingRequest.userName,
       movieId: show.movieId,
-      movieTitle: movie?.title || 'Featured Movie',
+      movieTitle: movie?.title || 'Feature Film',
       theatreId: show.theatreId,
-      theatreName: theatre?.name || 'CineBook Cinema',
-      theatreLocation: theatre?.location || 'Multiplex Complex',
+      theatreName: theatre?.name || 'CineBook Multiplex',
+      theatreLocation: theatre?.address || theatre?.location || 'Cinema Complex',
       screenId: show.screenId,
-      screenName: screen?.name || 'Audi 1',
+      screenName: screen?.name || 'Screen 1',
       showId: show._id,
       showDate: show.date,
       showTime: show.time,
@@ -629,67 +767,52 @@ export const DataStore = {
       convenienceFee,
       discount,
       totalAmount,
+      qrCode: qrPayload,
       bookingStatus: 'CONFIRMED',
       createdAt: new Date()
     } as any;
 
-    // 3. ATOMICALLY MARK SEATS AS BOOKED AND RELEASE LOCKS
+    // 3. ATOMIC STATE TRANSITION: Add seats to bookedSeats and remove locks
     show.bookedSeats = [...(show.bookedSeats || []), ...bookingRequest.seatNumbers];
     show.lockedSeats = (show.lockedSeats || []).filter(
       (l: any) => !bookingRequest.seatNumbers.includes(l.seatNumber)
     );
-    memoryStore.shows.set(show._id, show);
 
-    // Save booking
-    memoryStore.bookings.set(String(booking._id), booking);
-
-    // 4. GENERATE PAYMENT RECORD (Simulated)
-    const paymentId = `PAY-${Date.now().toString().slice(-4)}${Math.floor(1000 + Math.random() * 9000)}`;
-    const payment: IPayment = {
-      _id: `pay_${Date.now()}`,
-      paymentId,
-      bookingId: booking.bookingId,
-      amount: totalAmount,
-      status: 'SUCCESS',
-      transactionId: `TXN_${Date.now()}_${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
-      method: 'Demo UPI / Card',
-      createdAt: new Date()
-    } as any;
-    memoryStore.payments.set(String(payment._id), payment);
+    memoryStore.shows.set(String(show._id), show);
+    memoryStore.bookings.set(String(newBooking._id), newBooking);
 
     if (isConnectedToMongo) {
       try {
-        await BookingModel.create(booking);
-        await PaymentModel.create(payment);
         await ShowModel.findByIdAndUpdate(String(show._id), {
           bookedSeats: show.bookedSeats,
           lockedSeats: show.lockedSeats
         });
+        await BookingModel.create(newBooking);
       } catch (err) {
-        console.error('Mongo booking sync error:', err);
+        console.error('[Booking] Mongo persist warning:', err);
       }
     }
 
-    return {
-      booking,
-      payment
-    };
+    return newBooking;
   },
 
-  async getBookingsByUser(userId: string) {
+  async getBookingsByUser(userId: string, email?: string) {
     if (isConnectedToMongo) {
       try {
-        const b = await BookingModel.find({ userId }).sort({ createdAt: -1 });
+        const query = email
+          ? { $or: [{ userId }, { userEmail: email.toLowerCase() }] }
+          : { userId };
+        const b = await BookingModel.find(query).sort({ createdAt: -1 });
         if (b && b.length > 0) return b.map(x => x.toObject());
       } catch (err) {}
     }
+    const cleanEmail = email?.toLowerCase();
     return Array.from(memoryStore.bookings.values())
-      .filter(b => b.userId === userId)
+      .filter(b => b.userId === userId || (cleanEmail && b.userEmail?.toLowerCase() === cleanEmail))
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   },
 
   async getBookingById(bookingId: string) {
-    // Support either _id or human bookingId like "CB-1234"
     if (isConnectedToMongo) {
       try {
         const b = await BookingModel.findOne({
@@ -718,6 +841,78 @@ export const DataStore = {
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   },
 
+  // Payments
+  async createPaymentRecord(paymentData: any) {
+    const id = `pay_${Date.now()}`;
+    const payment = {
+      _id: id,
+      paymentId: `PAY-${Date.now().toString().slice(-4)}${Math.floor(1000 + Math.random() * 9000)}`,
+      ...paymentData,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    memoryStore.payments.set(id, payment);
+    if (payment.razorpayOrderId) {
+      memoryStore.payments.set(payment.razorpayOrderId, payment);
+    }
+    if (isConnectedToMongo) {
+      try {
+        await PaymentModel.create(payment);
+      } catch (err) {}
+    }
+    return payment;
+  },
+
+  async updatePaymentByOrderId(orderId: string, updateData: any) {
+    let payment = memoryStore.payments.get(orderId);
+    if (!payment) {
+      for (const p of memoryStore.payments.values()) {
+        if (p.razorpayOrderId === orderId) {
+          payment = p;
+          break;
+        }
+      }
+    }
+
+    if (payment) {
+      Object.assign(payment, updateData, { updatedAt: new Date() });
+      memoryStore.payments.set(payment._id, payment);
+      memoryStore.payments.set(orderId, payment);
+    }
+
+    if (isConnectedToMongo) {
+      try {
+        await PaymentModel.findOneAndUpdate(
+          { razorpayOrderId: orderId },
+          { ...updateData, updatedAt: new Date() },
+          { new: true }
+        );
+      } catch (err) {}
+    }
+    return payment;
+  },
+
+  async createRefundRecord(refundData: any) {
+    const refundId = `REF-${Date.now().toString().slice(-4)}${Math.floor(1000 + Math.random() * 9000)}`;
+    const refund: IRefund = {
+      _id: `ref_${Date.now()}`,
+      refundId,
+      bookingId: refundData.bookingId,
+      amount: refundData.amount,
+      status: 'INITIATED',
+      reason: refundData.reason || 'Refund initiated to customer payment method.',
+      createdAt: new Date()
+    } as any;
+    memoryStore.refunds.set(String(refund._id), refund);
+
+    if (isConnectedToMongo) {
+      try {
+        await RefundModel.create(refund);
+      } catch (e) {}
+    }
+    return refund;
+  },
+
   // Cancellation with 30-minute policy
   async cancelBooking(bookingId: string, userId: string, isAdmin = false) {
     const booking = await this.getBookingById(bookingId);
@@ -733,19 +928,15 @@ export const DataStore = {
 
     // Cancellation rule: Allowed until 30 minutes before showtime
     try {
-      // Parse showDate (YYYY-MM-DD) and showTime (e.g. 10:30 AM or 08:30 PM)
-      const datePart = booking.showDate; // e.g. "2024-09-24"
-      const timePart = booking.showTime; // e.g. "08:30 PM"
+      const datePart = booking.showDate;
+      const timePart = booking.showTime;
       const showDateTime = new Date(`${datePart} ${timePart}`);
 
-      // If valid date, check 30 minutes rule
       if (!isNaN(showDateTime.getTime())) {
         const now = new Date();
         const diffInMinutes = (showDateTime.getTime() - now.getTime()) / (1000 * 60);
 
-        // If the show was today and already past or within 30 minutes
         if (diffInMinutes < 30 && !isAdmin) {
-          // If the show date is today and less than 30 mins, block cancellation
           const todayStr = new Date().toISOString().split('T')[0];
           if (booking.showDate === todayStr) {
             throw new Error('Cancellation is only permitted at least 30 minutes prior to showtime.');
@@ -767,33 +958,26 @@ export const DataStore = {
 
       if (isConnectedToMongo) {
         try {
-          await ShowModel.findByIdAndUpdate(show._id, { bookedSeats: show.bookedSeats });
+          await ShowModel.findByIdAndUpdate(String(show._id), { bookedSeats: show.bookedSeats });
         } catch (e) {}
       }
     }
 
     // Generate Refund
-    const refundId = `REF-${Date.now().toString().slice(-4)}${Math.floor(1000 + Math.random() * 9000)}`;
-    const refund: IRefund = {
-      _id: `ref_${Date.now()}`,
-      refundId,
+    const refund = await this.createRefundRecord({
       bookingId: booking.bookingId,
       amount: booking.totalAmount,
-      status: 'INITIATED',
-      reason: 'User cancelled booking within eligible window. 100% refund initiated to source payment.',
-      createdAt: new Date()
-    } as any;
-    memoryStore.refunds.set(String(refund._id), refund);
+      reason: 'User cancelled booking within eligible window. 100% refund initiated to source payment.'
+    });
 
     // Update booking status
     booking.bookingStatus = 'CANCELLED';
     booking.cancellationReason = 'User cancelled booking. Refund processed.';
-    booking.refundId = refundId;
+    booking.refundId = refund.refundId;
     memoryStore.bookings.set(booking._id, booking);
 
     if (isConnectedToMongo) {
       try {
-        await RefundModel.create(refund);
         await BookingModel.findByIdAndUpdate(String(booking._id), {
           bookingStatus: 'CANCELLED',
           cancellationReason: booking.cancellationReason,

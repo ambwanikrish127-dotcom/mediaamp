@@ -9,7 +9,8 @@ export interface IUser extends Document {
   createdAt: Date;
 }
 
-export const UserSchema = new Schema<IUser>({
+export const UserSchema = new Schema({
+  _id: { type: String },
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true, lowercase: true, trim: true },
   password: { type: String, required: true },
@@ -38,7 +39,8 @@ export interface IMovie extends Document {
   createdAt: Date;
 }
 
-export const MovieSchema = new Schema<IMovie>({
+export const MovieSchema = new Schema({
+  _id: { type: String },
   title: { type: String, required: true },
   description: { type: String, required: true },
   poster: { type: String, required: true },
@@ -58,21 +60,54 @@ export const MovieSchema = new Schema<IMovie>({
 
 export const MovieModel = mongoose.models.Movie || mongoose.model<IMovie>('Movie', MovieSchema);
 
-// Theatre Schema
-export interface ITheatre extends Document {
+// City Schema
+export interface ICity extends Document {
   name: string;
-  city: string;
-  location: string;
-  totalScreens: number;
+  state: string;
+  country: string;
+  slug: string;
   isActive: boolean;
   createdAt: Date;
 }
 
-export const TheatreSchema = new Schema<ITheatre>({
+export const CitySchema = new Schema({
+  _id: { type: String },
+  name: { type: String, required: true, trim: true },
+  state: { type: String, required: true, trim: true },
+  country: { type: String, default: 'India' },
+  slug: { type: String, required: true, unique: true, lowercase: true, trim: true },
+  isActive: { type: Boolean, default: true },
+  createdAt: { type: Date, default: Date.now }
+});
+
+export const CityModel = mongoose.models.City || mongoose.model<ICity>('City', CitySchema);
+
+// Theatre Schema
+export interface ITheatre extends Document {
+  name: string;
+  city: string; // Normalized city name e.g. "Jaipur"
+  citySlug?: string;
+  address: string;
+  location: string; // Alias for address
+  images: string[];
+  facilities: string[];
+  totalScreens: number;
+  status: 'ACTIVE' | 'INACTIVE';
+  isActive: boolean;
+  createdAt: Date;
+}
+
+export const TheatreSchema = new Schema({
+  _id: { type: String },
   name: { type: String, required: true },
   city: { type: String, required: true },
-  location: { type: String, required: true },
+  citySlug: { type: String, lowercase: true, trim: true },
+  address: { type: String, required: true },
+  location: { type: String },
+  images: [{ type: String }],
+  facilities: [{ type: String }],
   totalScreens: { type: Number, default: 2 },
+  status: { type: String, enum: ['ACTIVE', 'INACTIVE'], default: 'ACTIVE' },
   isActive: { type: Boolean, default: true },
   createdAt: { type: Date, default: Date.now }
 });
@@ -87,7 +122,8 @@ export interface IScreen extends Document {
   totalSeats: number;
 }
 
-export const ScreenSchema = new Schema<IScreen>({
+export const ScreenSchema = new Schema({
+  _id: { type: String },
   theatreId: { type: String, required: true },
   name: { type: String, required: true },
   type: { type: String, default: 'Dolby Atmos' },
@@ -105,7 +141,8 @@ export interface ISeat extends Document {
   category: 'Regular' | 'Premium' | 'Recliner';
 }
 
-export const SeatSchema = new Schema<ISeat>({
+export const SeatSchema = new Schema({
+  _id: { type: String },
   screenId: { type: String, required: true },
   seatNumber: { type: String, required: true },
   row: { type: String, required: true },
@@ -139,7 +176,8 @@ export interface IShow extends Document {
   createdAt: Date;
 }
 
-export const ShowSchema = new Schema<IShow>({
+export const ShowSchema = new Schema({
+  _id: { type: String },
   movieId: { type: String, required: true },
   theatreId: { type: String, required: true },
   screenId: { type: String, required: true },
@@ -172,7 +210,8 @@ export interface IFoodItem extends Document {
   available: boolean;
 }
 
-export const FoodItemSchema = new Schema<IFoodItem>({
+export const FoodItemSchema = new Schema({
+  _id: { type: String },
   name: { type: String, required: true },
   category: { type: String, enum: ['Popcorn', 'Beverages', 'Combos', 'Snacks'], required: true },
   price: { type: Number, required: true },
@@ -225,7 +264,8 @@ export interface IBooking extends Document {
   createdAt: Date;
 }
 
-export const BookingSchema = new Schema<IBooking>({
+export const BookingSchema = new Schema({
+  _id: { type: String },
   bookingId: { type: String, required: true, unique: true },
   userId: { type: String, required: true },
   userEmail: { type: String, required: true },
@@ -268,21 +308,36 @@ export const BookingModel = mongoose.models.Booking || mongoose.model<IBooking>(
 export interface IPayment extends Document {
   paymentId: string;
   bookingId: string;
+  userId?: string;
+  razorpayOrderId?: string;
+  razorpayPaymentId?: string;
+  razorpaySignature?: string;
   amount: number;
-  status: 'SUCCESS' | 'PENDING' | 'FAILED';
-  transactionId: string;
-  method: string;
+  currency: string;
+  status: 'CREATED' | 'PENDING' | 'SUCCESS' | 'FAILED' | 'REFUNDED';
+  signatureVerified: boolean;
+  transactionId?: string;
+  method?: string;
   createdAt: Date;
+  updatedAt?: Date;
 }
 
-export const PaymentSchema = new Schema<IPayment>({
+export const PaymentSchema = new Schema({
+  _id: { type: String },
   paymentId: { type: String, required: true, unique: true },
   bookingId: { type: String, required: true },
+  userId: { type: String },
+  razorpayOrderId: { type: String },
+  razorpayPaymentId: { type: String },
+  razorpaySignature: { type: String },
   amount: { type: Number, required: true },
-  status: { type: String, enum: ['SUCCESS', 'PENDING', 'FAILED'], default: 'SUCCESS' },
-  transactionId: { type: String, required: true },
-  method: { type: String, default: 'Demo Payment (Simulated)' },
-  createdAt: { type: Date, default: Date.now }
+  currency: { type: String, default: 'INR' },
+  status: { type: String, enum: ['CREATED', 'PENDING', 'SUCCESS', 'FAILED', 'REFUNDED'], default: 'CREATED' },
+  signatureVerified: { type: Boolean, default: false },
+  transactionId: { type: String },
+  method: { type: String, default: 'Razorpay Test Mode' },
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now }
 });
 
 export const PaymentModel = mongoose.models.Payment || mongoose.model<IPayment>('Payment', PaymentSchema);
@@ -297,7 +352,8 @@ export interface IRefund extends Document {
   createdAt: Date;
 }
 
-export const RefundSchema = new Schema<IRefund>({
+export const RefundSchema = new Schema({
+  _id: { type: String },
   refundId: { type: String, required: true, unique: true },
   bookingId: { type: String, required: true },
   amount: { type: Number, required: true },

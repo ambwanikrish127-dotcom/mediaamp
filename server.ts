@@ -13,6 +13,7 @@ import bookingRoutes from './server/routes/bookingRoutes.js';
 import foodRoutes from './server/routes/foodRoutes.js';
 import paymentRoutes from './server/routes/paymentRoutes.js';
 import adminRoutes from './server/routes/adminRoutes.js';
+import { cityRoutes } from './server/routes/cityRoutes.js';
 
 dotenv.config();
 
@@ -20,7 +21,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = 3000;
 const isProduction = process.env.NODE_ENV === 'production';
 
 // Body parsers
@@ -44,6 +45,7 @@ app.use('/api/bookings', bookingRoutes);
 app.use('/api/food', foodRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/cities', cityRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
