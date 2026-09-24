@@ -1,0 +1,6 @@
+{
+  "name": "CineBook - Movie Ticket Booking",
+  "description": "Full-stack movie ticket booking platform with real-time seat locking, dynamic cinema layouts, snacks, QR tickets, and booking management.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
